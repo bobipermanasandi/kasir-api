@@ -317,8 +317,8 @@ func main() {
 		}
 	})
 
-	// Health Check -> http://localhost:8080/health
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	// Health Check -> http://localhost:8080/api/v1/health
+	http.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"status":  "OK",
