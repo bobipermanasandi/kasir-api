@@ -54,8 +54,7 @@ func main() {
 	productHandler := handlers.NewProductHandler(productService)
 
 	http.HandleFunc("/api/v1/products", productHandler.HandleProducts)
-	http.HandleFunc("/api/v1/products/{id}", productHandler.HandleProductByID)
-
+	http.HandleFunc("/api/v1/products/", productHandler.HandleProductByID)
 	// Health Check -> http://localhost:8080/api/v1/health
 	http.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -65,7 +64,7 @@ func main() {
 		})
 	})
 
-	addr := "localhost:" + config.Port
+	addr := ":" + config.Port
 	fmt.Println("Server running di " + addr)
 
 	error := http.ListenAndServe(addr, nil)
