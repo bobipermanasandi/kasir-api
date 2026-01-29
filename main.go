@@ -55,6 +55,15 @@ func main() {
 
 	http.HandleFunc("/api/v1/products", productHandler.HandleProducts)
 	http.HandleFunc("/api/v1/products/", productHandler.HandleProductByID)
+
+	categoryRepo := repositories.NewCategoryRepository(db)
+	categoryService := services.NewCategoryService(categoryRepo)
+	categoryHandler := handlers.NewCategoryHandler(categoryService)
+
+	http.HandleFunc("/api/v1/categories", categoryHandler.HandleCategories)
+	http.HandleFunc("/api/v1/categories/", categoryHandler.HandleCategoryByID)
+
+
 	// Health Check -> http://localhost:8080/api/v1/health
 	http.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

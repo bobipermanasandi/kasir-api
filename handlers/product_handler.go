@@ -1,28 +1,10 @@
 package handlers
 
 import (
-	"encoding/json"
 	"kasir-api/models"
 	"kasir-api/services"
 	"net/http"
-	"strconv"
-	"strings"
 )
-
-/* =========================
-   Response Struct
-========================= */
-
-type APIResponse struct {
-	Code    int    `json:"code"`
-	Status  string `json:"status"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-}
-
-/* =========================
-   Product Handler
-========================= */
 
 type ProductHandler struct {
 	service *services.ProductService
@@ -32,41 +14,8 @@ func NewProductHandler(service *services.ProductService) *ProductHandler {
 	return &ProductHandler{service: service}
 }
 
-/* =========================
-   Helper Functions
-========================= */
+const productBasePath = "/api/v1/products/"
 
-func writeJSON(w http.ResponseWriter, httpStatus int, message string, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(httpStatus)
-
-	response := APIResponse{
-		Code:    httpStatus,
-		Status:  http.StatusText(httpStatus),
-		Message: message,
-		Data:    data,
-	}
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func decodeJSON(r *http.Request, v any) error {
-	return json.NewDecoder(r.Body).Decode(v)
-}
-
-// getIDFromURL ambil ID dari path /api/v1/products/{id}
-func getIDFromURL(r *http.Request) (int, error) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/v1/products/")
-	return strconv.Atoi(idStr)
-}
-
-/* =========================
-   Route Handlers
-========================= */
-
-// HandleProducts - GET | POST /api/v1/products
 func (h *ProductHandler) HandleProducts(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -74,107 +23,85 @@ func (h *ProductHandler) HandleProducts(w http.ResponseWriter, r *http.Request) 
 	case http.MethodPost:
 		h.Create(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }
 
-// HandleProductByID - GET | PUT | DELETE /api/v1/products/{id}
 func (h *ProductHandler) HandleProductByID(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		h.GetByID(w, r)
+		h.GetDetail(w, r)
 	case http.MethodPut:
 		h.Update(w, r)
 	case http.MethodDelete:
 		h.Delete(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }
 
-/* =========================
-   CRUD Handlers
-========================= */
-
-// GetAll - GET /api/v1/products
 func (h *ProductHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	products, err := h.service.GetAll()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
 	writeJSON(w, http.StatusOK, "Products fetched successfully", products)
 }
 
-// Create - POST /api/v1/products
+func (h *ProductHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
+	id, ok := mustGetID(w, r, productBasePath)
+	if !ok {
+		return
+	}
+	product, err := h.service.GetByID(id)
+	if err != nil {
+		respondError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, "Product detail fetched successfully", product)
+}
+
 func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var product models.Product
-	if err := decodeJSON(r, &product); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	var req models.ProductRequest
+	if err := decodeJSON(r, &req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
-
-	if err := h.service.Create(&product); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	product, err := h.service.Create(&req)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
 	writeJSON(w, http.StatusCreated, "Product created successfully", product)
 }
 
-// GetByID - GET /api/v1/products/{id}
-func (h *ProductHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	id, err := getIDFromURL(r)
-	if err != nil {
-		http.Error(w, "Invalid product ID", http.StatusBadRequest)
-		return
-	}
-
-	product, err := h.service.GetByID(id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	writeJSON(w, http.StatusOK, "Product fetched successfully", product)
-}
-
-// Update - PUT /api/v1/products/{id}
 func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := getIDFromURL(r)
+	id, ok := mustGetID(w, r, productBasePath)
+	if !ok {
+		return
+	}
+	var req models.ProductRequest
+	if err := decodeJSON(r, &req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	product, err := h.service.Update(id, &req)
 	if err != nil {
-		http.Error(w, "Invalid product ID", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	var product models.Product
-	if err := decodeJSON(r, &product); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	product.ID = id
-	if err := h.service.Update(&product); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	writeJSON(w, http.StatusOK, "Product updated successfully", product)
 }
 
-// Delete - DELETE /api/v1/products/{id}
 func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := getIDFromURL(r)
-	if err != nil {
-		http.Error(w, "Invalid product ID", http.StatusBadRequest)
+	id, ok := mustGetID(w, r, productBasePath)
+	if !ok {
 		return
 	}
-
 	if err := h.service.Delete(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
 	writeJSON(w, http.StatusOK, "Product deleted successfully", nil)
 }
