@@ -14,19 +14,16 @@ func NewReportRepository(db *sql.DB) *ReportRepository {
 	return &ReportRepository{db: db}
 }
 
-// GetTodayReport returns report for today
 func (repo *ReportRepository) GetTodayReport() (*models.DailyReportResponse, error) {
-	// today start and end
-	today := time.Now()
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	today := time.Now().In(loc)
 
 	return repo.GetReportByDateRange(today, today)
 }
 
-// GetReportByDateRange returns report between startDate and endDate (inclusive)
 func (repo *ReportRepository) GetReportByDateRange(startDate, endDate time.Time) (*models.DailyReportResponse, error) {
 	var report models.DailyReportResponse
 
-	// Total revenue and total orders
 	err := repo.db.QueryRow(`
 		SELECT
 			COALESCE(SUM(total_amount), 0),
@@ -38,7 +35,6 @@ func (repo *ReportRepository) GetReportByDateRange(startDate, endDate time.Time)
 		return nil, err
 	}
 
-	// Best seller product
 	var (
 		productName sql.NullString
 		totalQty    sql.NullInt64
