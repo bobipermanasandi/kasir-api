@@ -15,14 +15,20 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 }
 
 // GetAll -> hanya category name
-func (r *ProductRepository) GetAll() ([]*models.ProductListResponse, error) {
+func (r *ProductRepository) GetAll(name string) ([]*models.ProductListResponse, error) {
 	query := `
 		SELECT p.id, p.name, p.price, p.stock, COALESCE(c.name,'Uncategories')
 		FROM products p
 		LEFT JOIN categories c ON c.id = p.category_id
-		ORDER BY p.id
-	`
-	rows, err := r.db.Query(query)
+		`
+
+	var args []interface{}
+
+	if name != "" {
+		query += ` WHERE p.name ILIKE $1`
+		args = append(args, "%"+name+"%")
+	}
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

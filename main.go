@@ -63,6 +63,23 @@ func main() {
 	http.HandleFunc("/api/v1/categories", categoryHandler.HandleCategories)
 	http.HandleFunc("/api/v1/categories/", categoryHandler.HandleCategoryByID)
 
+	// Transaction
+	transactionRepo := repositories.NewTransactionRepository(db)
+	transactionService := services.NewTransactionService(transactionRepo)
+	transactionHandler := handlers.NewTransactionHandler(transactionService)
+
+	http.HandleFunc("/api/v1/transactions", transactionHandler.HandleTransaction)
+	http.HandleFunc("/api/v1/transactions/", transactionHandler.HandleTransactionByID)
+	http.HandleFunc("/api/v1/checkout", transactionHandler.HandleCheckout)
+
+	
+	reportRepo := repositories.NewReportRepository(db)
+	reportService := services.NewReportService(reportRepo)
+	reportHandler := handlers.NewReportHandler(reportService)
+
+	http.HandleFunc("/api/v1/report", reportHandler.HandleReportByDateRange)
+	http.HandleFunc("/api/v1/report/today", reportHandler.HandleReport)
+	
 
 	// Health Check -> http://localhost:8080/api/v1/health
 	http.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
