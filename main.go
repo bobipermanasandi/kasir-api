@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"kasir-api/database"
 	"kasir-api/handlers"
-	"kasir-api/middleware"
+	"kasir-api/middlewares"
 	"kasir-api/repositories"
 	"kasir-api/services"
 	"log"
@@ -57,35 +57,35 @@ func main() {
 	productService := services.NewProductService(productRepo)
 	productHandler := handlers.NewProductHandler(productService)
 
-	apiKeyMiddleware := middleware.APIKey(config.APIKey)
+	apiKeyMiddleware := middlewares.APIKey(config.APIKey)
 
 
-	http.HandleFunc("/api/v1/products", productHandler.HandleProducts)
-	http.HandleFunc("/api/v1/products/", apiKeyMiddleware(productHandler.HandleProductByID))
+	http.HandleFunc("/api/v1/products", middlewares.CORS(middlewares.Logger(productHandler.HandleProducts)))
+	http.HandleFunc("/api/v1/products/", middlewares.CORS(middlewares.Logger(apiKeyMiddleware(productHandler.HandleProductByID))))
 
 	categoryRepo := repositories.NewCategoryRepository(db)
 	categoryService := services.NewCategoryService(categoryRepo)
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
 
-	http.HandleFunc("/api/v1/categories", categoryHandler.HandleCategories)
-	http.HandleFunc("/api/v1/categories/", categoryHandler.HandleCategoryByID)
+	http.HandleFunc("/api/v1/categories", middlewares.CORS(middlewares.Logger(categoryHandler.HandleCategories)))
+	http.HandleFunc("/api/v1/categories/", middlewares.CORS(middlewares.Logger(categoryHandler.HandleCategoryByID)))
 
 	// Transaction
 	transactionRepo := repositories.NewTransactionRepository(db)
 	transactionService := services.NewTransactionService(transactionRepo)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
-	http.HandleFunc("/api/v1/transactions", transactionHandler.HandleTransaction)
-	http.HandleFunc("/api/v1/transactions/", transactionHandler.HandleTransactionByID)
-	http.HandleFunc("/api/v1/checkout", apiKeyMiddleware(transactionHandler.HandleCheckout))
+	http.HandleFunc("/api/v1/transactions", middlewares.CORS(middlewares.Logger(transactionHandler.HandleTransaction)))
+	http.HandleFunc("/api/v1/transactions/", middlewares.CORS(middlewares.Logger(transactionHandler.HandleTransactionByID)))
+	http.HandleFunc("/api/v1/checkout", middlewares.CORS(middlewares.Logger(apiKeyMiddleware(transactionHandler.HandleCheckout))))
 
 	
 	reportRepo := repositories.NewReportRepository(db)
 	reportService := services.NewReportService(reportRepo)
 	reportHandler := handlers.NewReportHandler(reportService)
 
-	http.HandleFunc("/api/v1/report", reportHandler.HandleReportByDateRange)
-	http.HandleFunc("/api/v1/report/today", reportHandler.HandleReport)
+	http.HandleFunc("/api/v1/report", middlewares.CORS(middlewares.Logger(reportHandler.HandleReportByDateRange)))
+	http.HandleFunc("/api/v1/report/today", middlewares.CORS(middlewares.Logger(reportHandler.HandleReport)))
 	
 
 	// Health Check -> http://localhost:8080/api/v1/health
